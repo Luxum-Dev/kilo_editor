@@ -414,6 +414,8 @@ void editorProcessKeypress() {
     E.cx = 0;
     break;
   case END_KEY:
+    if (E.cy < E.numrows)
+      E.cx = E.row[E.cy].size;
     E.cx = E.screencols - 1;
     break;
 
