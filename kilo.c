@@ -23,10 +23,12 @@
 #define CTRL_KEY(k) ((k)&0x1f)
 
 // Add it here otherwise it will segfault
+/*** prototypes ***/
 extern char *strdup(const char *);
 extern int ftruncate(int fd, __off_t length);
 extern ssize_t getline(char **restrict lineptr, size_t *restrict n,
                        FILE *restrict stream);
+void editorSetStatusMessage(const char *fmt, ...);
 
 enum editorKey {
   BACKSPACE = 127,
@@ -324,10 +326,19 @@ void editorSave() {
   char *buf = editorRowsToString(&len);
 
   int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
-  ftruncate(fd, len);
-  write(fd, buf, len);
-  close(fd);
+  if (fd != -1) {
+    if (ftruncate(fd, len) != -1) {
+      if (write(fd, buf, len) == len) {
+        close(fd);
+        free(buf);
+        editorSetStatusMessage("%d bytes written to disk", len);
+        return;
+      }
+    }
+    close(fd);
+  }
   free(buf);
+  editorSetStatusMessage("Can't save! I/O error: %s", strerror(errno));
 }
 
 /*** append buffer ***/
@@ -593,7 +604,7 @@ int main(int argc, char *argv[]) {
     editorOpen(argv[1]);
   }
 
-  editorSetStatusMessage("HELP: CTRL-Q = Quit");
+  editorSetStatusMessage("HELP: CTRL-Q = Quit | CTRL-S = Save");
 
   while (1) {
     editorRefreshScreen();
